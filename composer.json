@@ -1,0 +1,74 @@
+{
+    "name": "ervinsvilumsons/laravel-upload",
+    "description": "Laravel Upload Manager is a package that provides an easy way to handle file uploads in Laravel applications.",
+    "keywords": [
+        "ervinsvilumsons",
+        "laravel",
+        "laravel-upload"
+    ],
+    "homepage": "https://github.com/ervinsvilumsons/laravel-upload",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "ervinsvilumsons",
+            "email": "ervins.vilumsons@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.30",
+        "orchestra/testbench": "^11.2",
+        "pestphp/pest": "^5",
+        "phpstan/phpstan": "^2.2",
+        "rector/rector": "^2.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "ErvinsVilumsons\\LaravelUpload\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ErvinsVilumsons\\LaravelUpload\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "analyse": "@php vendor/bin/phpstan analyse src tests --level=10",
+        "format": "@php vendor/bin/pint",
+        "format:test": "@php vendor/bin/pint --test",
+        "refactor": "@php vendor/bin/rector",
+        "refactor:test": "@php vendor/bin/rector --dry-run",
+        "test": "@php vendor/bin/pest",
+        "test:coverage": "XDEBUG_MODE=develop,coverage php vendor/bin/pest --coverage --min=80",
+        "check": [
+            "@composer audit",
+            "@composer validate --strict",
+            "@format:test",
+            "@refactor:test",
+            "@analyse",
+            "@test:coverage"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ErvinsVilumsons\\LaravelUpload\\UploadManagerServiceProvider"
+            ],
+            "aliases": {
+                "UploadManager": "ErvinsVilumsons\\LaravelUpload\\Facades\\UploadManager"
+            }
+        }
+    },
+    "prefer-stable": true
+}
