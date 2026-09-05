@@ -67,7 +67,7 @@ class UploadManager implements UploadManagerContract
     public function upload(UploadedFile|string $file, array $options = [], ?callable $progress = null): UploadResult
     {
         if (! $this->disk instanceof FilesystemAdapter) {
-            throw new UploadException('The configured filesystem does not support URLs.');
+            throw UploadException::invalidFilesystem();
         }
 
         $stagedPath = null;
@@ -94,7 +94,7 @@ class UploadManager implements UploadManagerContract
 
         try {
             if (! $this->storage->store($uploadFile, $path, $stagedPath === null ? $progress : null, $fileSize)) {
-                throw new UploadException('Unable to store the uploaded file.');
+                throw UploadException::uploadFailed();
             }
         } finally {
             if ($stagedPath !== null && file_exists($stagedPath)) {
