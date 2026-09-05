@@ -28,7 +28,9 @@ final class UploadFileMetadata
 
     public function size(UploadedFile|string $file): ?int
     {
-        $size = $file instanceof UploadedFile ? $file->getSize() : filesize($file);
+        $size = $file instanceof UploadedFile
+            ? $file->getSize()
+            : (is_file($file) ? filesize($file) : null);
 
         return $size === false ? null : $size;
     }
@@ -36,7 +38,7 @@ final class UploadFileMetadata
     public function validateSize(UploadedFile|string $file, ?int $fileSize): void
     {
         if ($file instanceof UploadedFile && $file->getError() === UPLOAD_ERR_INI_SIZE) {
-            throw new UploadException('The uploaded file exceeds upload_max_filesize.');
+            throw UploadException::fileTooLarge();
         }
 
         if ($fileSize === null) {
@@ -46,7 +48,7 @@ final class UploadFileMetadata
         $limits = array_filter([$this->iniSizeInBytes('upload_max_filesize'), $this->iniSizeInBytes('post_max_size')], static fn (?int $limit): bool => $limit !== null);
 
         if ($limits !== [] && $fileSize > min($limits)) {
-            throw new UploadException(sprintf('The uploaded file is too large. Maximum allowed size is %s.', $this->formatBytes(min($limits))));
+            throw UploadException::fileTooLarge();
         }
     }
 
@@ -78,16 +80,5 @@ final class UploadFileMetadata
         $unit = strtolower($matches[2] ?? '');
 
         return isset($multipliers[$unit]) ? (int) ((float) $matches[1] * $multipliers[$unit]) : null;
-    }
-
-    private function formatBytes(int $bytes): string
-    {
-        foreach ([1024 ** 6 => 'EB', 1024 ** 5 => 'PB', 1024 ** 4 => 'TB', 1024 ** 3 => 'GB', 1024 ** 2 => 'MB', 1024 => 'KB'] as $unitBytes => $unit) {
-            if ($bytes >= $unitBytes) {
-                return rtrim(rtrim(number_format($bytes / $unitBytes, 2, '.', ''), '0'), '.').$unit;
-            }
-        }
-
-        return $bytes.'B';
     }
 }

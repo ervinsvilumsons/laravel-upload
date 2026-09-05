@@ -37,7 +37,7 @@ describe('UploadFileMetadata', function (): void {
         $file = UploadedFile::fake()->create('too-large.bin', 1);
 
         $metadata->validateSize($file, 3 * 1024 * 1024);
-    })->throws(UploadException::class, 'too large');
+    })->throws(UploadException::class, 'The uploaded file is too large.');
 
     it('rejects files with an ini upload error', function (): void {
         $path = tempnam(sys_get_temp_dir(), 'upload-error-');
@@ -46,5 +46,5 @@ describe('UploadFileMetadata', function (): void {
         $metadata = new UploadFileMetadata;
 
         $metadata->validateSize($file, null);
-    })->throws(UploadException::class, 'upload_max_filesize');
+    })->throws(UploadException::class, 'The uploaded file is too large.');
 });

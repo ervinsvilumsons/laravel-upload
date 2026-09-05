@@ -28,7 +28,7 @@ final class UploadSettings
         $profiles = config('upload-manager.profiles', []);
 
         if (! is_array($profiles) || ! array_key_exists($profileName, $profiles)) {
-            throw new UploadException("Profile '{$profileName}' not found.");
+            throw UploadException::invalidProfile($profileName);
         }
 
         return self::normalize($profiles[$profileName]);

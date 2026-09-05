@@ -21,7 +21,7 @@ final readonly class UploadStager
         if ($sourceStream === false || $stagedPath === false || $stagedStream === false) {
             $this->cleanupStreams($sourceStream, $stagedStream, $stagedPath);
 
-            throw new UploadException('Unable to stage file for upload.');
+            throw UploadException::streamFailed();
         }
 
         $hashers = $this->createHashers($hash);
@@ -101,7 +101,7 @@ final readonly class UploadStager
         array &$hashers = [],
     ): int {
         if (! is_resource($sourceStream) || ! is_resource($stagedStream)) {
-            throw new UploadException('Unable to copy file stream.');
+            throw UploadException::streamFailed('Unable to copy file stream.');
         }
 
         $processed = 0;
@@ -114,7 +114,7 @@ final readonly class UploadStager
             $chunk = fread($sourceStream, 8192);
 
             if ($chunk === false) {
-                throw new UploadException('Unable to read file while copying.');
+                throw UploadException::streamFailed('Unable to read file while copying.');
             }
 
             if ($chunk === '') {
@@ -124,7 +124,7 @@ final readonly class UploadStager
             $written = fwrite($stagedStream, $chunk);
 
             if ($written !== strlen($chunk)) {
-                throw new UploadException('Unable to write file while copying.');
+                throw UploadException::streamFailed('Unable to write file while copying.');
             }
 
             foreach ($hashers as $hasher) {

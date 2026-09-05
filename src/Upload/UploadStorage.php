@@ -18,7 +18,7 @@ final readonly class UploadStorage
     {
         $sourceStream = $this->stager->openFileStream($file);
         if ($sourceStream === false) {
-            throw new UploadException('Unable to open file for upload.');
+            throw UploadException::encryptionFailed('Unable to open file for upload.');
         }
         try {
             if ($this->encrypt) {
@@ -26,7 +26,7 @@ final readonly class UploadStorage
             }
             $uploadStream = tmpfile();
             if ($uploadStream === false) {
-                throw new UploadException('Unable to create temporary stream for upload.');
+                throw UploadException::encryptionFailed('Unable to create temporary stream for upload.');
             }
             try {
                 $this->stager->copyStream($sourceStream, $uploadStream, $progress, $totalBytes);
@@ -36,7 +36,7 @@ final readonly class UploadStorage
                 fclose($uploadStream);
             }
             if ($uploaded === false) {
-                throw new UploadException('Failed to upload file to storage.');
+                throw UploadException::encryptionFailed('Failed to upload file to storage.');
             }
 
             return (bool) $uploaded;
@@ -52,7 +52,7 @@ final readonly class UploadStorage
     {
         $storedStream = $this->disk->readStream($path);
         if ($storedStream === null) {
-            throw new UploadException('Unable to open stored file for reading.');
+            throw UploadException::encryptionFailed('Unable to open stored file for reading.');
         }
         if (! $this->encrypt) {
             return $storedStream;
@@ -60,11 +60,11 @@ final readonly class UploadStorage
         $plainStream = tmpfile();
         if ($plainStream === false) {
             fclose($storedStream);
-            throw new UploadException('Unable to create temporary stream for decryption.');
+            throw UploadException::encryptionFailed('Unable to create temporary stream for decryption.');
         }
         try {
             if (! $this->encryptionProvider->decryptStream($storedStream, $plainStream)) {
-                throw new UploadException('Unable to decrypt stored file.');
+                throw UploadException::encryptionFailed('Unable to decrypt stored file.');
             }
             rewind($plainStream);
             fclose($storedStream);
@@ -80,7 +80,7 @@ final readonly class UploadStorage
             if ($e instanceof UploadException) {
                 throw $e;
             }
-            throw new UploadException('Failed to read encrypted file.', 0, $e);
+            throw UploadException::encryptionFailed('Failed to read encrypted file.');
         }
     }
 
@@ -88,18 +88,18 @@ final readonly class UploadStorage
     {
         $encryptedStream = tmpfile();
         if ($encryptedStream === false) {
-            throw new UploadException('Unable to create temporary stream for encryption.');
+            throw UploadException::encryptionFailed('Unable to create temporary stream for encryption.');
         }
         try {
             if (! $this->encryptionProvider->encryptStream($sourceStream, $encryptedStream, 8192, $progress, $totalBytes)) {
-                throw new UploadException('Encryption failed.');
+                throw UploadException::encryptionFailed();
             }
             if (fseek($encryptedStream, 0) !== 0) {
-                throw new UploadException('Unable to rewind encrypted stream.');
+                throw UploadException::encryptionFailed('Unable to rewind encrypted stream.');
             }
             $uploaded = $this->disk->put($path, $encryptedStream);
             if ($uploaded === false) {
-                throw new UploadException('Failed to upload encrypted file to storage.');
+                throw UploadException::encryptionFailed('Failed to upload encrypted file to storage.');
             }
 
             return (bool) $uploaded;
@@ -107,7 +107,7 @@ final readonly class UploadStorage
             if ($e instanceof UploadException) {
                 throw $e;
             }
-            throw new UploadException('Failed to encrypt and upload file.', 0, $e);
+            throw UploadException::encryptionFailed('Failed to encrypt and upload file.');
         } finally {
             fclose($encryptedStream);
         }
