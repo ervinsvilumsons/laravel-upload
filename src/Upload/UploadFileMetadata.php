@@ -28,15 +28,11 @@ final class UploadFileMetadata
 
     public function size(UploadedFile|string $file): ?int
     {
-        if ($file instanceof UploadedFile) {
-            return $file->getSize();
-        }
+        $size = $file instanceof UploadedFile
+            ? $file->getSize()
+            : (is_file($file) ? filesize($file) : null);
 
-        if (! is_file($file)) {
-            return null;
-        }
-
-        return filesize($file) ?: null;
+        return $size === false ? null : $size;
     }
 
     public function validateSize(UploadedFile|string $file, ?int $fileSize): void
