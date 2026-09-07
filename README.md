@@ -4,6 +4,7 @@
 ![PHP 8.3+](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php)
 ![Laravel 10+](https://img.shields.io/badge/Laravel-10%2B-FF2D20?logo=laravel&logoColor=white)
 [![Tests](https://github.com/ervinsvilumsons/laravel-upload/actions/workflows/ci.yml/badge.svg)](https://github.com/ervinsvilumsons/laravel-upload/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/ervinsvilumsons/laravel-upload/branch/staging/graph/badge.svg?token=QJZMUSPBAL)](https://codecov.io/github/ervinsvilumsons/laravel-upload)
 [![License](https://img.shields.io/github/license/ervinsvilumsons/laravel-upload)](https://github.com/ervinsvilumsons/laravel-upload/blob/main/LICENSE)
 
 A stream-aware file upload package for Laravel with hashing, encryption, deduplication, and configurable upload profiles.
