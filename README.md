@@ -5,6 +5,7 @@
 ![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fervinsvilumsons%2Flaravel-upload.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fervinsvilumsons%2Flaravel-upload?ref=badge_shield)
 
 A stream-aware file upload package for Laravel with hashing, encryption, deduplication, and configurable upload profiles.
 
@@ -85,3 +86,5 @@ $result->mimeType;
 ## ⚖️ License
 
 [MIT](LICENSE)
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fervinsvilumsons%2Flaravel-upload.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fervinsvilumsons%2Flaravel-upload?ref=badge_large)
