@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ErvinsVilumsons\LaravelUpload\Upload;
 
 use ErvinsVilumsons\LaravelUpload\Exceptions\UploadException;
+use Illuminate\Support\Facades\Config;
 
 final class UploadSettings
 {
@@ -25,9 +26,12 @@ final class UploadSettings
      */
     public static function profile(string $profileName): array
     {
-        $profiles = config('upload-manager.profiles', []);
+        $profiles = array_merge(
+            ['default' => Config::array('upload-manager.default')],
+            Config::array('upload-manager.profiles', []),
+        );
 
-        if (! is_array($profiles) || ! array_key_exists($profileName, $profiles)) {
+        if (! array_key_exists($profileName, $profiles)) {
             throw UploadException::invalidProfile($profileName);
         }
 
