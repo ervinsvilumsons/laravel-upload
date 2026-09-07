@@ -1,22 +1,21 @@
 # Laravel Upload Manager
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/ervinsvilumsons/laravel-upload.svg?style=flat-square)](https://packagist.org/packages/ervinsvilumsons/laravel-upload)
 ![PHP 8.3+](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php)
 ![Laravel 10+](https://img.shields.io/badge/Laravel-10%2B-FF2D20?logo=laravel&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Tests](https://github.com/ervinsvilumsons/laravel-upload/actions/workflows/ci.yml/badge.svg)](https://github.com/ervinsvilumsons/laravel-upload/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/ervinsvilumsons/laravel-upload)](https://github.com/ervinsvilumsons/laravel-upload/blob/main/LICENSE)
 
 A stream-aware file upload package for Laravel with hashing, encryption, deduplication, and configurable upload profiles.
 
 ## 🧩 Features
 
 - Stream large files without loading them entirely into memory
-- SHA-256 and other content hashing
+- SHA-256 content hashing
 - Optional streaming encryption
 - Content-based filenames and deduplication
 - Configurable upload profiles
 - Dynamic paths such as `uploads/{year}/{month}/{day}`
-- Extensible architecture
 
 ## 📦 Installation
 
@@ -27,7 +26,7 @@ composer require ervinsvilumsons/laravel-upload
 Publish the configuration:
 
 ```bash
-php artisan vendor:publish --provider="ErvinsVilumsons\LaravelUpload\UploadManagerServiceProvider"
+php artisan vendor:publish --tag=upload-manager-config
 ```
 
 ## 🚀 Quick Start
@@ -35,7 +34,7 @@ php artisan vendor:publish --provider="ErvinsVilumsons\LaravelUpload\UploadManag
 ```php
 use UploadManager;
 
-$result = UploadManager::profile('default')->upload($request->file('document'));
+$result = UploadManager::profile('documents')->upload($request->file('document'));
 ```
 
 ### Profiles
@@ -84,4 +83,4 @@ $result->mimeType;
 
 ## ⚖️ License
 
-[MIT](LICENSE)
+Laravel Upload Manager is released under the [MIT License](LICENSE).

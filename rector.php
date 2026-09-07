@@ -16,7 +16,7 @@ return RectorConfig::configure()
     ->withRules([
         DeclareStrictTypesRector::class,
     ])
-    ->withPhpSets(php54: true)
+    ->withPhpSets(php83: true)
     ->withAttributesSets()
     ->withTypeCoverageLevel(10)
     ->withDeadCodeLevel(10)
