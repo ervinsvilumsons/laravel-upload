@@ -18,6 +18,6 @@ class UploadManagerServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->publishes([__DIR__.'/../config/upload-manager.php' => config_path('upload-manager.php')], 'upload-manager-config');
+        $this->publishes([__DIR__.'/../config/upload-manager.php' => config_path('upload-manager.php')], 'upload-manager');
     }
 }

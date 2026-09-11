@@ -27,7 +27,7 @@ composer require ervinsvilumsons/laravel-upload
 Publish the configuration:
 
 ```bash
-php artisan vendor:publish --tag=upload-manager-config
+php artisan vendor:publish --tag=upload-manager
 ```
 
 ## 🚀 Quick Start
