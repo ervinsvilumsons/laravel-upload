@@ -10,7 +10,8 @@ use Illuminate\Http\UploadedFile;
 
 describe('UploadFileMetadata', function (): void {
     it('reads metadata from file paths', function (): void {
-        $path = tempnam(sys_get_temp_dir(), 'metadata-');
+
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'metadata-'.uniqid();
         file_put_contents($path, 'metadata content');
         $metadata = new UploadFileMetadata;
 
