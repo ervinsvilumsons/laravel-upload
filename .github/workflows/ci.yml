@@ -38,6 +38,7 @@ jobs:
             fileinfo,
             libxml,
             mbstring,
+            sodium,
             zip
           coverage: xdebug
 
