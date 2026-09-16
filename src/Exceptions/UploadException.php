@@ -66,7 +66,7 @@ class UploadException extends \RuntimeException
         return new self(self::INVALID_FILESYSTEM, $message);
     }
 
-    public static function invalidPRofile(string $profileName): self
+    public static function invalidProfile(string $profileName): self
     {
         return new self(self::INVALID_PROFILE, "Profile '{$profileName}' not found.");
     }

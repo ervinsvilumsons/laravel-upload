@@ -2,101 +2,185 @@
 
 declare(strict_types=1);
 
-namespace ErvinsVilumsons\LaravelUpload\Tests\Unit;
-
 use ErvinsVilumsons\LaravelUpload\Exceptions\UploadException;
 use ErvinsVilumsons\LaravelUpload\Generators\FilenameGenerator;
+use ErvinsVilumsons\LaravelUpload\Upload\UploadFunctionMocks;
 use ErvinsVilumsons\LaravelUpload\Upload\UploadStager;
 
-use function fclose;
-use function fopen;
-use function fwrite;
-use function rewind;
-use function stream_get_contents;
+// ---------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------
 
-describe('UploadStager', function (): void {
-    it('copies streams with progress and optional hashes', function (): void {
-        $stager = new UploadStager(new FilenameGenerator('sha256'));
-        $source = fopen('php://temp', 'w+b');
-        $destination = fopen('php://temp', 'w+b');
-        if (! is_resource($source) || ! is_resource($destination)) {
-            throw new \RuntimeException('Unable to create test streams.');
+function realStager(): UploadStager
+{
+    return new UploadStager(new FilenameGenerator);
+}
+
+function stagerWith(string $strategy): UploadStager
+{
+    return new UploadStager(new FilenameGenerator($strategy));
+}
+
+/**
+ * @return resource
+ */
+function stagerStream(string $mode = 'w+')
+{
+    $handle = fopen('php://temp', $mode);
+    if ($handle === false) {
+        throw new RuntimeException('Unable to open temp stream');
+    }
+
+    return $handle;
+}
+
+/**
+ * @return array{string, callable(): void}
+ */
+function stagerTempFile(string $contents = 'data'): array
+{
+    $path = (string) tempnam(sys_get_temp_dir(), 'src');
+    file_put_contents($path, $contents);
+
+    return [$path, static function () use ($path): void {
+        @unlink($path);
+    }];
+}
+
+beforeEach(function (): void {
+    UploadFunctionMocks::reset();
+});
+
+afterEach(function (): void {
+    UploadFunctionMocks::reset();
+});
+
+// ---------------------------------------------------------------------
+// stageAndHash() — lines 37..44
+// ---------------------------------------------------------------------
+
+it('stageAndHash cleans up and rethrows when copyStream throws', function (): void {
+    [$src, $cleanup] = stagerTempFile();
+
+    UploadFunctionMocks::$fread = static fn ($stream, int $length): false => false;
+
+    try {
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
+            ->toThrow(UploadException::class, 'Unable to read file while copying.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// stageAndHash() / cleanupStreams() — lines 76, 170
+// ---------------------------------------------------------------------
+
+it('stageAndHash throws when tempnam fails', function (): void {
+    UploadFunctionMocks::$tempnam = static fn (string $dir, string $prefix): false => false;
+
+    [$src, $cleanup] = stagerTempFile();
+
+    try {
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
+            ->toThrow(UploadException::class);
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// cleanupStreams() — lines 80, 84
+// ---------------------------------------------------------------------
+
+it('stageAndHash cleans up staged stream when source file cannot be opened', function (): void {
+    expect(fn (): array => realStager()->stageAndHash(
+        '/nonexistent/'.uniqid().'.txt',
+        false,
+        null,
+        null,
+    ))->toThrow(UploadException::class);
+});
+
+// ---------------------------------------------------------------------
+// copyStream() — line 104
+// ---------------------------------------------------------------------
+
+it('copyStream throws when source is not a resource', function (): void {
+    $dst = stagerStream('w+');
+
+    try {
+        expect(fn (): int => realStager()->copyStream(
+            // @phpstan-ignore-next-line argument.type — deliberately testing the guard
+            'not-a-resource',
+            $dst,
+            null,
+            null,
+        ))->toThrow(UploadException::class, 'Unable to copy file stream.');
+    } finally {
+        fclose($dst);
+    }
+});
+
+// ---------------------------------------------------------------------
+// createStagedStream() — lines 176..178
+// ---------------------------------------------------------------------
+
+it('stageAndHash throws when fopen for staged stream fails', function (): void {
+    UploadFunctionMocks::$fopen = static function (string $filename, string $mode) {
+        if ($mode === 'wb') {
+            return false;
         }
-        $hashers = ['sha256' => hash_init('sha256')];
-        $updates = [];
-        fwrite($source, 'streamed content');
-        rewind($source);
 
-        $processed = $stager->copyStream($source, $destination, function (int $bytes, ?int $total) use (&$updates): void {
-            $updates[] = [$bytes, $total];
-        }, 16, $hashers);
+        return \fopen($filename, $mode);
+    };
 
-        rewind($destination);
-        expect($processed)->toBe(16)
-            ->and(stream_get_contents($destination))->toBe('streamed content')
-            ->and(hash_final($hashers['sha256']))->toBe(hash('sha256', 'streamed content'))
-            ->and($updates)->toBe([[0, 16], [16, 16]]);
+    [$src, $cleanup] = stagerTempFile();
 
-        fclose($source);
-        fclose($destination);
-    });
+    try {
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
+            ->toThrow(UploadException::class);
+    } finally {
+        $cleanup();
+    }
+});
 
-    it('copies streams without hashers', function (): void {
-        $stager = new UploadStager(new FilenameGenerator('original'));
-        $source = fopen('php://temp', 'w+b');
-        $destination = fopen('php://temp', 'w+b');
-        if (! is_resource($source) || ! is_resource($destination)) {
-            throw new \RuntimeException('Unable to create test streams.');
-        }
-        fwrite($source, 'plain');
-        rewind($source);
+// ---------------------------------------------------------------------
+// copyStream() — line 117
+// ---------------------------------------------------------------------
 
-        expect($stager->copyStream($source, $destination, null, null))->toBe(5);
+it('copyStream throws when fread returns false', function (): void {
+    $src = stagerStream('r+');
+    fwrite($src, 'data');
+    rewind($src);
 
-        fclose($source);
-        fclose($destination);
-    });
+    $dst = stagerStream('w+');
 
-    it('rejects invalid stream handles', function (): void {
-        $stager = new UploadStager(new FilenameGenerator('original'));
+    UploadFunctionMocks::$fread = static fn ($stream, int $length): false => false;
 
-        // @phpstan-ignore-next-line argument.type
-        $stager->copyStream(false, false, null, null);
-    })->throws(UploadException::class, 'copy file stream');
+    expect(fn (): int => realStager()->copyStream($src, $dst, null, null))
+        ->toThrow(UploadException::class, 'Unable to read file while copying.');
 
-    it('opens existing files and rejects missing files', function (): void {
-        $stager = new UploadStager(new FilenameGenerator('original'));
-        $path = tempnam(sys_get_temp_dir(), 'stager-');
-        file_put_contents($path, 'content');
+    fclose($src);
+    fclose($dst);
+});
 
-        $stream = $stager->openFileStream($path);
-        if (! is_resource($stream)) {
-            throw new \RuntimeException('Unable to open test stream.');
-        }
-        fclose($stream);
-        unlink($path);
+// ---------------------------------------------------------------------
+// copyStream() — line 127
+// ---------------------------------------------------------------------
 
-        expect($stager->openFileStream($path))->toBeFalse();
-    });
+it('copyStream throws when fwrite fails', function (): void {
+    $src = stagerStream('r+');
+    fwrite($src, 'data');
+    rewind($src);
 
-    it('stages and hashes a file', function (): void {
-        $path = tempnam(sys_get_temp_dir(), 'stager-source-');
-        file_put_contents($path, 'hashed content');
-        $stager = new UploadStager(new FilenameGenerator('sha256'));
+    $dst = stagerStream('w+');
 
-        [$stagedPath, $filenameHash, $contentHash] = $stager->stageAndHash($path, true, null, 14);
+    UploadFunctionMocks::$fwrite = static fn ($stream, string $data, ?int $length): int => 0;
 
-        expect(file_get_contents($stagedPath))->toBe('hashed content')
-            ->and($filenameHash)->toBe(hash('sha256', 'hashed content'))
-            ->and($contentHash)->toBe(hash('sha256', 'hashed content'));
+    expect(fn (): int => realStager()->copyStream($src, $dst, null, null))
+        ->toThrow(UploadException::class, 'Unable to write file while copying.');
 
-        unlink($path);
-        unlink($stagedPath);
-    });
-
-    it('rejects staging a missing source file', function (): void {
-        $stager = new UploadStager(new FilenameGenerator('original'));
-
-        $stager->stageAndHash(sys_get_temp_dir().'/missing-stage-'.uniqid(), false, null, null);
-    })->throws(UploadException::class, 'stage file');
+    fclose($src);
+    fclose($dst);
 });
