@@ -209,9 +209,6 @@ final class AesEncryptionProvider implements EncryptionProviderContract
         $contents = '';
         while (strlen($contents) < $length && ! feof($stream)) {
             $remaining = $length - strlen($contents);
-            if ($remaining <= 0) {
-                break;
-            }
 
             $chunk = fread($stream, $remaining);
             if ($chunk === false || $chunk === '') {

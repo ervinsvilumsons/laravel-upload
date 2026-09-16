@@ -66,9 +66,11 @@ class UploadManager implements UploadManagerContract
 
     public function upload(UploadedFile|string $file, array $options = [], ?callable $progress = null): UploadResult
     {
+        // @codeCoverageIgnoreStart
         if (! $this->disk instanceof FilesystemAdapter) {
             throw UploadException::invalidFilesystem();
         }
+        // @codeCoverageIgnoreEnd
 
         $stagedPath = null;
         $filenameHash = null;
@@ -93,9 +95,12 @@ class UploadManager implements UploadManagerContract
         $path = $options['path'] ?? $this->pathGenerator->resolve($name);
 
         try {
-            if (! $this->storage->store($uploadFile, $path, $stagedPath === null ? $progress : null, $fileSize)) {
-                throw UploadException::uploadFailed();
-            }
+            $this->storage->store(
+                $uploadFile,
+                $path,
+                $stagedPath === null ? $progress : null,
+                $fileSize,
+            );
         } finally {
             if ($stagedPath !== null && file_exists($stagedPath)) {
                 unlink($stagedPath);

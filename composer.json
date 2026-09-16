@@ -34,7 +34,11 @@
     "autoload-dev": {
         "psr-4": {
             "ErvinsVilumsons\\LaravelUpload\\Tests\\": "tests/"
-        }
+        },
+        "files": [
+            "tests/Support/EncryptionFunctionMocks.php",
+            "tests/Support/UploadFunctionMocks.php"
+        ]
     },
     "scripts": {
         "prepare": "@php vendor/bin/testbench package:discover --ansi",

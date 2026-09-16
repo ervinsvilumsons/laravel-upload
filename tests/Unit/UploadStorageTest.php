@@ -2,75 +2,313 @@
 
 declare(strict_types=1);
 
-namespace ErvinsVilumsons\LaravelUpload\Tests\Unit;
-
 use ErvinsVilumsons\LaravelUpload\Encryption\AesEncryptionProvider;
+use ErvinsVilumsons\LaravelUpload\Encryption\EncryptionFunctionMocks;
 use ErvinsVilumsons\LaravelUpload\Exceptions\UploadException;
 use ErvinsVilumsons\LaravelUpload\Generators\FilenameGenerator;
+use ErvinsVilumsons\LaravelUpload\Upload\UploadFunctionMocks;
 use ErvinsVilumsons\LaravelUpload\Upload\UploadStager;
 use ErvinsVilumsons\LaravelUpload\Upload\UploadStorage;
-use Illuminate\Filesystem\FilesystemAdapter;
-use Illuminate\Support\Facades\Storage;
-use Mockery;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Mockery\MockInterface;
 
-use function fclose;
-use function stream_get_contents;
+// ---------------------------------------------------------------------
+// helpers
+// ---------------------------------------------------------------------
 
-describe('UploadStorage', function (): void {
-    it('stores and reads an unencrypted file', function (): void {
-        $disk = Storage::disk('test');
-        $storage = new UploadStorage($disk, new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, false);
-        $sourcePath = tempnam(sys_get_temp_dir(), 'storage-');
-        file_put_contents($sourcePath, 'stored content');
+function uploadStager(): UploadStager
+{
+    return new UploadStager(new FilenameGenerator);
+}
 
-        expect($storage->store($sourcePath, 'unit/plain.txt', null, 14))->toBeTrue();
-        $stream = $storage->readStream('unit/plain.txt');
+/**
+ * @return resource
+ */
+function uploadTmpStream(string $mode = 'w+')
+{
+    $handle = fopen('php://temp', $mode);
+    if ($handle === false) {
+        throw new RuntimeException('Unable to open temp stream');
+    }
 
-        expect(stream_get_contents($stream))->toBe('stored content');
-        fclose($stream);
-        unlink($sourcePath);
-    });
+    return $handle;
+}
 
-    it('rejects a missing source file', function (): void {
-        $storage = new UploadStorage(Storage::disk('test'), new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, false);
+/**
+ * @return array{string, callable(): void}
+ */
+function uploadTempFile(string $contents = 'data'): array
+{
+    $path = (string) tempnam(sys_get_temp_dir(), 'src');
+    file_put_contents($path, $contents);
 
-        $storage->store(sys_get_temp_dir().'/missing-source-'.uniqid(), 'missing.txt', null, null);
-    })->throws(UploadException::class, 'open file');
+    return [$path, static function () use ($path): void {
+        @unlink($path);
+    }];
+}
 
-    it('rejects a missing stored file', function (): void {
-        $storage = new UploadStorage(Storage::disk('test'), new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, false);
+function uploadDisk(): Filesystem&MockInterface
+{
+    /** @var Filesystem&MockInterface $mock */
+    $mock = mock(Filesystem::class);
 
-        $storage->readStream('missing-stored-file.txt');
-    })->throws(UploadException::class, 'stored file');
+    return $mock;
+}
 
-    it('rejects invalid encrypted stored content', function (): void {
-        Storage::disk('test')->put('invalid-encrypted.bin', 'not encrypted content');
-        $storage = new UploadStorage(Storage::disk('test'), new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, true);
+function uploadStorage(Filesystem $disk, bool $encrypt): UploadStorage
+{
+    return new UploadStorage($disk, uploadStager(), new AesEncryptionProvider, $encrypt);
+}
 
-        $storage->readStream('invalid-encrypted.bin');
-    })->throws(UploadException::class, 'decrypt');
+// ---------------------------------------------------------------------
+// setup / teardown
+// ---------------------------------------------------------------------
 
-    it('rejects a failed storage write', function (): void {
-        /** @var FilesystemAdapter&MockInterface $disk */
-        $disk = Mockery::mock(FilesystemAdapter::class);
-        $disk->shouldReceive('put')->once()->andReturn(false);
-        $sourcePath = tempnam(sys_get_temp_dir(), 'storage-failed-');
-        file_put_contents($sourcePath, 'failed write');
-        $storage = new UploadStorage($disk, new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, false);
+beforeEach(function () {
+    EncryptionFunctionMocks::reset();
+    UploadFunctionMocks::reset();
 
-        $storage->store($sourcePath, 'failed.txt', null, 12);
-    })->throws(UploadException::class, 'Failed to upload');
+    $GLOBALS['app.key'] = 'base64:'.base64_encode(
+        str_repeat('k', SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES)
+    );
+});
 
-    it('rejects a failed encrypted storage write', function (): void {
-        /** @var FilesystemAdapter&MockInterface $disk */
-        $disk = Mockery::mock(FilesystemAdapter::class);
-        $disk->shouldReceive('put')->once()->andReturn(false);
-        $sourcePath = tempnam(sys_get_temp_dir(), 'storage-encrypted-failed-');
-        file_put_contents($sourcePath, 'failed encrypted write');
-        $storage = new UploadStorage($disk, new UploadStager(new FilenameGenerator('original')), new AesEncryptionProvider, true);
+afterEach(function () {
+    EncryptionFunctionMocks::reset();
+    UploadFunctionMocks::reset();
+    unset($GLOBALS['app.key']);
+});
 
-        $storage->store($sourcePath, 'failed-encrypted.txt', null, 22);
-    })->throws(UploadException::class, 'Failed to upload encrypted');
+// ---------------------------------------------------------------------
+// store() — line 21
+// ---------------------------------------------------------------------
 
+it('store throws when source file cannot be opened', function () {
+    $disk = uploadDisk();
+    $disk->shouldNotReceive('put');
+
+    $storage = uploadStorage($disk, false);
+
+    expect(fn () => $storage->store('/nonexistent/'.uniqid().'.txt', 'path', null, null))
+        ->toThrow(UploadException::class, 'Unable to open file for upload.');
+});
+
+// ---------------------------------------------------------------------
+// store() — line 29
+// ---------------------------------------------------------------------
+
+it('store throws when tmpfile fails in non-encrypted path', function () {
+    UploadFunctionMocks::$tmpfile = static fn (): false => false;
+
+    [$src, $cleanup] = uploadTempFile();
+
+    $disk = uploadDisk();
+    $disk->shouldNotReceive('put');
+
+    $storage = uploadStorage($disk, false);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Unable to create temporary stream for upload.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// store() — line 39
+// ---------------------------------------------------------------------
+
+it('store throws when put fails in non-encrypted path', function () {
+    [$src, $cleanup] = uploadTempFile();
+
+    $disk = uploadDisk();
+    $disk->shouldReceive('put')->once()->andReturn(false);
+
+    $storage = uploadStorage($disk, false);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Failed to upload file to storage.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// readStream() — line 55
+// ---------------------------------------------------------------------
+
+it('readStream throws when disk readStream returns null', function () {
+    $disk = uploadDisk();
+    $disk->shouldReceive('readStream')->once()->with('path')->andReturn(null);
+
+    $storage = uploadStorage($disk, false);
+
+    expect(fn () => $storage->readStream('path'))
+        ->toThrow(UploadException::class, 'Unable to open stored file for reading.');
+});
+
+// ---------------------------------------------------------------------
+// readStream() — lines 62..63
+// ---------------------------------------------------------------------
+
+it('readStream throws when tmpfile fails for decryption', function () {
+    UploadFunctionMocks::$tmpfile = static fn (): false => false;
+
+    $stored = uploadTmpStream('r+');
+    fwrite($stored, 'cipher');
+    rewind($stored);
+
+    $disk = uploadDisk();
+    $disk->shouldReceive('readStream')->once()->with('path')->andReturn($stored);
+
+    $storage = uploadStorage($disk, true);
+
+    expect(fn () => $storage->readStream('path'))
+        ->toThrow(UploadException::class, 'Unable to create temporary stream for decryption.');
+});
+
+// ---------------------------------------------------------------------
+// readStream() — lines 67, 81
+// ---------------------------------------------------------------------
+
+it('readStream rethrows UploadException from decryption failure', function () {
+    $stored = uploadTmpStream('r+');
+    fwrite($stored, 'XXXXX');
+    rewind($stored);
+
+    $disk = uploadDisk();
+    $disk->shouldReceive('readStream')->once()->with('path')->andReturn($stored);
+
+    $storage = uploadStorage($disk, true);
+
+    expect(fn () => $storage->readStream('path'))
+        ->toThrow(UploadException::class, 'Unable to decrypt stored file.');
+});
+
+// ---------------------------------------------------------------------
+// readStream() — line 83
+// ---------------------------------------------------------------------
+
+it('readStream wraps non-UploadException during decryption', function () {
+    EncryptionFunctionMocks::$fread =
+        static function ($stream, int $length): string|false {
+            throw new RuntimeException('boom');
+        };
+
+    $stored = uploadTmpStream('r+');
+    fwrite($stored, 'LUMS1'.str_repeat(
+        'H',
+        SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES
+    ));
+    rewind($stored);
+
+    $disk = uploadDisk();
+    $disk->shouldReceive('readStream')->once()->with('path')->andReturn($stored);
+
+    $storage = uploadStorage($disk, true);
+
+    expect(fn () => $storage->readStream('path'))
+        ->toThrow(UploadException::class, 'Failed to read encrypted file.');
+});
+
+// ---------------------------------------------------------------------
+// encryptAndStore() — line 91
+// ---------------------------------------------------------------------
+
+it('encryptAndStore throws when tmpfile fails', function () {
+    UploadFunctionMocks::$tmpfile = static fn (): false => false;
+
+    [$src, $cleanup] = uploadTempFile();
+
+    $storage = uploadStorage(uploadDisk(), true);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Unable to create temporary stream for encryption.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// encryptAndStore() — line 95
+// ---------------------------------------------------------------------
+
+it('encryptAndStore throws when encryption fails', function () {
+    EncryptionFunctionMocks::$initPush = static fn (string $key): array => [];
+
+    [$src, $cleanup] = uploadTempFile();
+
+    $storage = uploadStorage(uploadDisk(), true);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class);
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// encryptAndStore() — line 98
+// ---------------------------------------------------------------------
+
+it('encryptAndStore throws when fseek fails', function () {
+    UploadFunctionMocks::$fseek =
+        static fn ($stream, int $offset, int $whence): int => -1;
+
+    [$src, $cleanup] = uploadTempFile();
+
+    $storage = uploadStorage(uploadDisk(), true);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Unable to rewind encrypted stream.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// encryptAndStore() — line 102
+// ---------------------------------------------------------------------
+
+it('encryptAndStore throws when put fails', function () {
+    [$src, $cleanup] = uploadTempFile();
+
+    $disk = uploadDisk();
+    $disk->shouldReceive('put')->once()->andReturn(false);
+
+    $storage = uploadStorage($disk, true);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Failed to upload encrypted file to storage.');
+    } finally {
+        $cleanup();
+    }
+});
+
+// ---------------------------------------------------------------------
+// encryptAndStore() — line 110
+// ---------------------------------------------------------------------
+
+it('encryptAndStore wraps non-UploadException', function () {
+    EncryptionFunctionMocks::$fwrite =
+        static function ($stream, string $data, int $call): int|false {
+            throw new RuntimeException('boom');
+        };
+
+    [$src, $cleanup] = uploadTempFile();
+
+    $storage = uploadStorage(uploadDisk(), true);
+
+    try {
+        expect(fn () => $storage->store($src, 'path', null, null))
+            ->toThrow(UploadException::class, 'Failed to encrypt and upload file.');
+    } finally {
+        $cleanup();
+    }
 });

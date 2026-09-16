@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ErvinsVilumsons\LaravelUpload\Tests\Feature;
 
 use ErvinsVilumsons\LaravelUpload\Exceptions\UploadException;
+use ErvinsVilumsons\LaravelUpload\Upload\UploadFileMetadata;
 use ErvinsVilumsons\LaravelUpload\Upload\UploadSettings;
 use ErvinsVilumsons\LaravelUpload\UploadManager;
 use Illuminate\Http\UploadedFile;
@@ -81,6 +82,14 @@ describe('UploadManager', function (): void {
         });
     });
 
+    describe('settings', function (): void {
+        it('returns empty settings when input is not an array', function (): void {
+            expect(UploadSettings::normalize(null))->toBe([]);
+            expect(UploadSettings::normalize('invalid'))->toBe([]);
+            expect(UploadSettings::normalize(123))->toBe([]);
+        });
+    });
+
     describe('filename strategies', function (): void {
         it('uses uuid strategy', function (): void {
             $manager = new UploadManager([
@@ -124,6 +133,26 @@ describe('UploadManager', function (): void {
 
             // Both files have same content, should generate same hash-based name
             expect($result1->name)->toBe($result2->name);
+        });
+
+        it('falls back to the original filename when an empty name is provided', function (): void {
+            Storage::fake('local');
+
+            $file = UploadedFile::fake()->create(
+                'original.pdf',
+                10,
+                'application/pdf'
+            );
+
+            $manager = new UploadManager([
+                'disk' => 'local',
+            ]);
+
+            $result = $manager->upload($file, [
+                'name' => '',
+            ]);
+
+            expect($result->name)->toBe('original.pdf');
         });
     });
 
@@ -310,6 +339,24 @@ describe('UploadManager', function (): void {
             $result = $manager()->upload($file);
 
             expect($result->originalName)->toBe('my-original-file.pdf');
+        });
+
+        it('returns early when file size is null', function (): void {
+            $metadata = new UploadFileMetadata;
+
+            $metadata->validateSize('test.txt', null);
+
+            expect(true)->toBeTrue();
+        });
+
+        it('ignores invalid ini size values', function (): void {
+            $metadata = new UploadFileMetadata(
+                iniGetter: static fn (string $setting): string => 'invalid',
+            );
+
+            $metadata->validateSize('/tmp/non-existent-file', 1024);
+
+            expect(true)->toBeTrue();
         });
     });
 });

@@ -111,5 +111,61 @@ describe('StreamHasher', function (): void {
                 expect($hash)->toBeString()->not()->toBeEmpty();
             }
         });
+
+        it('throws when reading a file chunk fails', function (): void {
+            $wrapperClass = new class
+            {
+                public function stream_open(
+                    string $path,
+                    string $mode,
+                    int $options,
+                    ?string &$openedPath
+                ): bool {
+                    return true;
+                }
+
+                public function stream_read(int $count): false
+                {
+                    return false;
+                }
+
+                public function stream_eof(): bool
+                {
+                    return false;
+                }
+
+                /** @return array<string, mixed> */
+                public function stream_stat(): array
+                {
+                    return [];
+                }
+
+                /** @return array<string, mixed> */
+                public function url_stat(
+                    string $path,
+                    int $flags
+                ): array {
+                    return [
+                        'mode' => 0100444,
+                        'size' => 1,
+                    ];
+                }
+            };
+
+            stream_wrapper_register('failing', $wrapperClass::class);
+
+            try {
+                $hasher = new StreamHasher;
+
+                expect(fn (): string => $hasher->hash('failing://test'))
+                    ->toThrow(
+                        \RuntimeException::class,
+                        'Error reading file chunk.'
+                    );
+            } finally {
+                stream_wrapper_unregister('failing');
+            }
+        });
+
     });
 });

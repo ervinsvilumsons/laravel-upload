@@ -12,6 +12,16 @@ use function fwrite;
 use function rewind;
 
 describe('AesEncryptionProvider edge cases', function (): void {
+    it('rejects an invalid encryption source', function (): void {
+        $provider = new AesEncryptionProvider;
+
+        expect($provider->encrypt(null, '/tmp/output.bin'))
+            ->toBeFalse();
+
+        expect($provider->encrypt('', '/tmp/output.bin'))
+            ->toBeFalse();
+    });
+
     it('rejects invalid stream arguments and chunk sizes', function (): void {
         $provider = new AesEncryptionProvider;
         $stream = fopen('php://temp', 'w+b');

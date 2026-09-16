@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace ErvinsVilumsons\LaravelUpload\Tests;
 
+use ErvinsVilumsons\LaravelUpload\Encryption\AesEncryptionProvider;
 use ErvinsVilumsons\LaravelUpload\Facades\UploadManager;
 use ErvinsVilumsons\LaravelUpload\UploadManagerServiceProvider;
 use Illuminate\Config\Repository;
 use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
-class TestCase extends BaseTestCase
+abstract class TestCase extends BaseTestCase
 {
+    protected AesEncryptionProvider $provider;
+
     protected function getPackageProviders($app): array
     {
         return [
