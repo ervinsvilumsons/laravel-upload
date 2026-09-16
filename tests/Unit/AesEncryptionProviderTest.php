@@ -92,7 +92,7 @@ function makeEncryptedStream(string $plain)
     return $dst;
 }
 
-beforeEach(function () {
+beforeEach(function (): void {
     EncryptionFunctionMocks::reset();
 
     $GLOBALS['app.key'] = 'base64:'.base64_encode(
@@ -100,7 +100,7 @@ beforeEach(function () {
     );
 });
 
-afterEach(function () {
+afterEach(function (): void {
     EncryptionFunctionMocks::reset();
     unset($GLOBALS['app.key']);
 });
@@ -109,7 +109,7 @@ afterEach(function () {
 // sanity
 // ---------------------------------------------------------------------
 
-it('has the namespace mocks loaded', function () {
+it('has the namespace mocks loaded', function (): void {
     expect(\function_exists(
         'ErvinsVilumsons\LaravelUpload\Encryption\config'
     ))->toBeTrue();
@@ -119,7 +119,7 @@ it('has the namespace mocks loaded', function () {
 // encrypt()
 // ---------------------------------------------------------------------
 
-it('encrypt returns false when source cannot be opened', function () {
+it('encrypt returns false when source cannot be opened', function (): void {
     $out = tempnam(sys_get_temp_dir(), 'out');
 
     set_error_handler(static fn (): bool => true);
@@ -131,7 +131,7 @@ it('encrypt returns false when source cannot be opened', function () {
     }
 });
 
-it('encrypt returns false when output cannot be opened', function () {
+it('encrypt returns false when output cannot be opened', function (): void {
     $src = (string) tempnam(sys_get_temp_dir(), 'src');
     file_put_contents($src, 'hello');
 
@@ -146,7 +146,7 @@ it('encrypt returns false when output cannot be opened', function () {
     }
 });
 
-it('encrypt works end-to-end for a real file', function () {
+it('encrypt works end-to-end for a real file', function (): void {
     $src = (string) tempnam(sys_get_temp_dir(), 'src');
     file_put_contents($src, str_repeat('payload-', 2000));
 
@@ -167,7 +167,7 @@ it('encrypt works end-to-end for a real file', function () {
 // encryptStream()
 // ---------------------------------------------------------------------
 
-it('encryptStream returns false when chunk size is below 1', function () {
+it('encryptStream returns false when chunk size is below 1', function (): void {
     [$src, $dst] = memoryStreams('data');
 
     expect(provider()->encryptStream($src, $dst, 0))->toBeFalse();
@@ -176,7 +176,7 @@ it('encryptStream returns false when chunk size is below 1', function () {
     fclose($dst);
 });
 
-it('encryptStream returns false when source is not a resource', function () {
+it('encryptStream returns false when source is not a resource', function (): void {
     $dst = stream();
 
     expect(provider()->encryptStream('not-a-resource', $dst))->toBeFalse();
@@ -184,7 +184,7 @@ it('encryptStream returns false when source is not a resource', function () {
     fclose($dst);
 });
 
-it('encryptStream returns false when init_push state is empty', function () {
+it('encryptStream returns false when init_push state is empty', function (): void {
     EncryptionFunctionMocks::$initPush = static fn (string $key): array => [];
 
     [$src, $dst] = memoryStreams('data');
@@ -195,7 +195,7 @@ it('encryptStream returns false when init_push state is empty', function () {
     fclose($dst);
 });
 
-it('encryptStream returns false when init_push state types are invalid', function () {
+it('encryptStream returns false when init_push state types are invalid', function (): void {
     EncryptionFunctionMocks::$initPush = static fn (string $key): array => [123, 'header'];
 
     [$src, $dst] = memoryStreams('data');
@@ -206,7 +206,7 @@ it('encryptStream returns false when init_push state types are invalid', functio
     fclose($dst);
 });
 
-it('encryptStream returns false when header write fails', function () {
+it('encryptStream returns false when header write fails', function (): void {
     EncryptionFunctionMocks::$fwrite =
         static fn ($stream, string $data, int $call): int => 0;
 
@@ -218,7 +218,7 @@ it('encryptStream returns false when header write fails', function () {
     fclose($dst);
 });
 
-it('encryptStream returns false when fread fails', function () {
+it('encryptStream returns false when fread fails', function (): void {
     EncryptionFunctionMocks::$fread =
         static fn ($stream, int $length): false => false;
 
@@ -230,7 +230,7 @@ it('encryptStream returns false when fread fails', function () {
     fclose($dst);
 });
 
-it('encryptStream returns false when frame write fails', function () {
+it('encryptStream returns false when frame write fails', function (): void {
     EncryptionFunctionMocks::$fwrite =
         static fn ($stream, string $data, int $call): int => $call === 1 ? strlen($data) : 0;
 
@@ -242,7 +242,7 @@ it('encryptStream returns false when frame write fails', function () {
     fclose($dst);
 });
 
-it('encryptStream calls progress callback', function () {
+it('encryptStream calls progress callback', function (): void {
     /** @var list<array{int, int|null}> $calls */
     $calls = [];
 
@@ -273,7 +273,7 @@ it('encryptStream calls progress callback', function () {
 // decrypt()
 // ---------------------------------------------------------------------
 
-it('decrypt returns false when encrypted file cannot be opened', function () {
+it('decrypt returns false when encrypted file cannot be opened', function (): void {
     $out = (string) tempnam(sys_get_temp_dir(), 'out');
 
     set_error_handler(static fn (): bool => true);
@@ -285,7 +285,7 @@ it('decrypt returns false when encrypted file cannot be opened', function () {
     }
 });
 
-it('decrypt returns false when output file cannot be opened', function () {
+it('decrypt returns false when output file cannot be opened', function (): void {
     $src = (string) tempnam(sys_get_temp_dir(), 'src');
     file_put_contents($src, 'dummy');
 
@@ -304,7 +304,7 @@ it('decrypt returns false when output file cannot be opened', function () {
 // decryptStream()
 // ---------------------------------------------------------------------
 
-it('decryptStream returns false when chunk size is below 1', function () {
+it('decryptStream returns false when chunk size is below 1', function (): void {
     [$src, $dst] = encryptedHeaderOnlyStream();
 
     expect(provider()->decryptStream($src, $dst, 0))->toBeFalse();
@@ -313,7 +313,7 @@ it('decryptStream returns false when chunk size is below 1', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when source is not a resource', function () {
+it('decryptStream returns false when source is not a resource', function (): void {
     $dst = stream();
 
     expect(provider()->decryptStream('not-a-resource', $dst))->toBeFalse();
@@ -321,7 +321,7 @@ it('decryptStream returns false when source is not a resource', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when magic header is wrong', function () {
+it('decryptStream returns false when magic header is wrong', function (): void {
     $bad = str_repeat(
         'X',
         strlen('LUMS1') + SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES
@@ -339,7 +339,7 @@ it('decryptStream returns false when magic header is wrong', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when length bytes are missing', function () {
+it('decryptStream returns false when length bytes are missing', function (): void {
     [$src, $dst] = encryptedHeaderOnlyStream();
 
     expect(provider()->decryptStream($src, $dst))->toBeFalse();
@@ -348,7 +348,7 @@ it('decryptStream returns false when length bytes are missing', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when unpack returns invalid data', function () {
+it('decryptStream returns false when unpack returns invalid data', function (): void {
     EncryptionFunctionMocks::$unpack =
         static fn (string $format, string $string): array => [];
 
@@ -360,7 +360,7 @@ it('decryptStream returns false when unpack returns invalid data', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when length is too small', function () {
+it('decryptStream returns false when length is too small', function (): void {
     [$src, $dst] = craftedEncryptedStream(pack('N', 0));
 
     expect(provider()->decryptStream($src, $dst))->toBeFalse();
@@ -369,7 +369,7 @@ it('decryptStream returns false when length is too small', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when length is too large', function () {
+it('decryptStream returns false when length is too large', function (): void {
     [$src, $dst] = craftedEncryptedStream(pack('N', 999999));
 
     expect(provider()->decryptStream($src, $dst))->toBeFalse();
@@ -378,7 +378,7 @@ it('decryptStream returns false when length is too large', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when ciphertext is short', function () {
+it('decryptStream returns false when ciphertext is short', function (): void {
     [$src, $dst] = craftedEncryptedStream(
         pack('N', SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_ABYTES).'x'
     );
@@ -389,7 +389,7 @@ it('decryptStream returns false when ciphertext is short', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when ciphertext fails authentication', function () {
+it('decryptStream returns false when ciphertext fails authentication', function (): void {
     $header = 'LUMS1'.str_repeat(
         'H',
         SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES
@@ -410,7 +410,7 @@ it('decryptStream returns false when ciphertext fails authentication', function 
     fclose($dst);
 });
 
-it('decryptStream returns false when output write fails', function () {
+it('decryptStream returns false when output write fails', function (): void {
     $src = makeEncryptedStream('hello');
     $dst = stream();
 
@@ -423,7 +423,7 @@ it('decryptStream returns false when output write fails', function () {
     fclose($dst);
 });
 
-it('decryptStream returns false when trailing bytes are present', function () {
+it('decryptStream returns false when trailing bytes are present', function (): void {
     $src = makeEncryptedStream('hello');
     fwrite($src, 'trailing');
     rewind($src);
@@ -440,23 +440,20 @@ it('decryptStream returns false when trailing bytes are present', function () {
 // private methods
 // ---------------------------------------------------------------------
 
-it('writeFrame returns false for non-resource', function () {
+it('writeFrame returns false for non-resource', function (): void {
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'writeFrame');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider(), 'not-a-resource', 'abc'))->toBeFalse();
 });
 
-it('readBytes returns empty for non-resource', function () {
+it('readBytes returns empty for non-resource', function (): void {
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'readBytes');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider(), 'not-a-resource', 10))->toBe('');
 });
 
-it('readBytes breaks when fread returns empty', function () {
+it('readBytes breaks when fread returns empty', function (): void {
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'readBytes');
-    $method->setAccessible(true);
 
     $src = stream('r+');
     fwrite($src, 'x');
@@ -474,42 +471,38 @@ it('readBytes breaks when fread returns empty', function () {
 // key()
 // ---------------------------------------------------------------------
 
-it('key hashes non-sodium-length keys', function () {
+it('key hashes non-sodium-length keys', function (): void {
     $GLOBALS['app.key'] = 'short';
 
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'key');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider()))
         ->toBe(hash('sha256', 'short', true));
 });
 
-it('key handles non-string config', function () {
+it('key handles non-string config', function (): void {
     $GLOBALS['app.key'] = null;
 
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'key');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider()))
         ->toBe(hash('sha256', '', true));
 });
 
-it('key handles invalid base64', function () {
+it('key handles invalid base64', function (): void {
     $GLOBALS['app.key'] = 'base64:!!!not-valid!!!';
 
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'key');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider()))
         ->toBe(hash('sha256', '', true));
 });
 
-it('key accepts a raw sodium-length key', function () {
+it('key accepts a raw sodium-length key', function (): void {
     $raw = str_repeat('z', SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES);
     $GLOBALS['app.key'] = $raw;
 
     $method = new ReflectionMethod(AesEncryptionProvider::class, 'key');
-    $method->setAccessible(true);
 
     expect($method->invoke(provider()))->toBe($raw);
 });

@@ -47,11 +47,11 @@ function stagerTempFile(string $contents = 'data'): array
     }];
 }
 
-beforeEach(function () {
+beforeEach(function (): void {
     UploadFunctionMocks::reset();
 });
 
-afterEach(function () {
+afterEach(function (): void {
     UploadFunctionMocks::reset();
 });
 
@@ -59,13 +59,13 @@ afterEach(function () {
 // stageAndHash() — lines 37..44
 // ---------------------------------------------------------------------
 
-it('stageAndHash cleans up and rethrows when copyStream throws', function () {
+it('stageAndHash cleans up and rethrows when copyStream throws', function (): void {
     [$src, $cleanup] = stagerTempFile();
 
     UploadFunctionMocks::$fread = static fn ($stream, int $length): false => false;
 
     try {
-        expect(fn () => realStager()->stageAndHash($src, false, null, null))
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
             ->toThrow(UploadException::class, 'Unable to read file while copying.');
     } finally {
         $cleanup();
@@ -76,13 +76,13 @@ it('stageAndHash cleans up and rethrows when copyStream throws', function () {
 // stageAndHash() / cleanupStreams() — lines 76, 170
 // ---------------------------------------------------------------------
 
-it('stageAndHash throws when tempnam fails', function () {
+it('stageAndHash throws when tempnam fails', function (): void {
     UploadFunctionMocks::$tempnam = static fn (string $dir, string $prefix): false => false;
 
     [$src, $cleanup] = stagerTempFile();
 
     try {
-        expect(fn () => realStager()->stageAndHash($src, false, null, null))
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
             ->toThrow(UploadException::class);
     } finally {
         $cleanup();
@@ -93,8 +93,8 @@ it('stageAndHash throws when tempnam fails', function () {
 // cleanupStreams() — lines 80, 84
 // ---------------------------------------------------------------------
 
-it('stageAndHash cleans up staged stream when source file cannot be opened', function () {
-    expect(fn () => realStager()->stageAndHash(
+it('stageAndHash cleans up staged stream when source file cannot be opened', function (): void {
+    expect(fn (): array => realStager()->stageAndHash(
         '/nonexistent/'.uniqid().'.txt',
         false,
         null,
@@ -106,11 +106,11 @@ it('stageAndHash cleans up staged stream when source file cannot be opened', fun
 // copyStream() — line 104
 // ---------------------------------------------------------------------
 
-it('copyStream throws when source is not a resource', function () {
+it('copyStream throws when source is not a resource', function (): void {
     $dst = stagerStream('w+');
 
     try {
-        expect(fn () => realStager()->copyStream(
+        expect(fn (): int => realStager()->copyStream(
             // @phpstan-ignore-next-line argument.type — deliberately testing the guard
             'not-a-resource',
             $dst,
@@ -126,7 +126,7 @@ it('copyStream throws when source is not a resource', function () {
 // createStagedStream() — lines 176..178
 // ---------------------------------------------------------------------
 
-it('stageAndHash throws when fopen for staged stream fails', function () {
+it('stageAndHash throws when fopen for staged stream fails', function (): void {
     UploadFunctionMocks::$fopen = static function (string $filename, string $mode) {
         if ($mode === 'wb') {
             return false;
@@ -138,7 +138,7 @@ it('stageAndHash throws when fopen for staged stream fails', function () {
     [$src, $cleanup] = stagerTempFile();
 
     try {
-        expect(fn () => realStager()->stageAndHash($src, false, null, null))
+        expect(fn (): array => realStager()->stageAndHash($src, false, null, null))
             ->toThrow(UploadException::class);
     } finally {
         $cleanup();
@@ -149,7 +149,7 @@ it('stageAndHash throws when fopen for staged stream fails', function () {
 // copyStream() — line 117
 // ---------------------------------------------------------------------
 
-it('copyStream throws when fread returns false', function () {
+it('copyStream throws when fread returns false', function (): void {
     $src = stagerStream('r+');
     fwrite($src, 'data');
     rewind($src);
@@ -158,7 +158,7 @@ it('copyStream throws when fread returns false', function () {
 
     UploadFunctionMocks::$fread = static fn ($stream, int $length): false => false;
 
-    expect(fn () => realStager()->copyStream($src, $dst, null, null))
+    expect(fn (): int => realStager()->copyStream($src, $dst, null, null))
         ->toThrow(UploadException::class, 'Unable to read file while copying.');
 
     fclose($src);
@@ -169,7 +169,7 @@ it('copyStream throws when fread returns false', function () {
 // copyStream() — line 127
 // ---------------------------------------------------------------------
 
-it('copyStream throws when fwrite fails', function () {
+it('copyStream throws when fwrite fails', function (): void {
     $src = stagerStream('r+');
     fwrite($src, 'data');
     rewind($src);
@@ -178,7 +178,7 @@ it('copyStream throws when fwrite fails', function () {
 
     UploadFunctionMocks::$fwrite = static fn ($stream, string $data, ?int $length): int => 0;
 
-    expect(fn () => realStager()->copyStream($src, $dst, null, null))
+    expect(fn (): int => realStager()->copyStream($src, $dst, null, null))
         ->toThrow(UploadException::class, 'Unable to write file while copying.');
 
     fclose($src);
