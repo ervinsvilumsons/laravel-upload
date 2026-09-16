@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd" backupGlobals="false" bootstrap="vendor/autoload.php" colors="true" processIsolation="false" stopOnFailure="false" cacheDirectory=".phpunit.cache" backupStaticProperties="false">
+<phpunit 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd" 
+    backupGlobals="false" 
+    bootstrap="vendor/autoload.php" 
+    colors="true" 
+    processIsolation="false" 
+    stopOnFailure="false" 
+    cacheDirectory=".phpunit.cache" 
+    backupStaticProperties="false"
+>
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -15,5 +25,10 @@
         <include>
             <directory suffix=".php">./src</directory>
         </include>
+
+        <exclude>
+            <directory suffix=".php">src/Exceptions</directory>
+            <directory suffix=".php">src/Facades</directory>
+        </exclude>
     </source>
 </phpunit>
