@@ -7,41 +7,44 @@ namespace ErvinsVilumsons\LaravelUpload\Tests;
 use ErvinsVilumsons\LaravelUpload\Facades\UploadManager;
 use ErvinsVilumsons\LaravelUpload\UploadManagerServiceProvider;
 use Illuminate\Config\Repository;
+use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 
 class TestCase extends BaseTestCase
 {
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
         return [
             UploadManagerServiceProvider::class,
         ];
     }
 
-    protected function getPackageAliases($app)
+    protected function getPackageAliases($app): array
     {
         return [
             'UploadManager' => UploadManager::class,
         ];
     }
 
-    protected function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
         /** @var Repository $config */
         $config = $app['config'];
 
-        // Set up test filesystem disk
+        $testStoragePath = $this->getTestStoragePath($app);
+
+        // Set up test filesystem disk.
         $config->set('filesystems.disks.test', [
             'driver' => 'local',
-            'root' => storage_path('testing'),
+            'root' => $testStoragePath,
             'url' => '/storage',
             'visibility' => 'public',
         ]);
 
-        // Set test as default disk
+        // Set test as default disk.
         $config->set('filesystems.default', 'test');
 
-        // Configure upload manager for tests
+        // Configure upload manager for tests.
         $config->set('upload-manager', [
             'default' => [
                 'disk' => 'test',
@@ -50,6 +53,7 @@ class TestCase extends BaseTestCase
                 'hash' => false,
                 'encrypt' => false,
             ],
+
             'profiles' => [
                 'documents' => [
                     'disk' => 'test',
@@ -57,12 +61,14 @@ class TestCase extends BaseTestCase
                     'filename' => 'sha256',
                     'hash' => true,
                 ],
+
                 'images' => [
                     'disk' => 'test',
                     'path' => 'images/{year}/{month}/{day}',
                     'filename' => 'uuid',
                     'hash' => true,
                 ],
+
                 'encrypted' => [
                     'disk' => 'test',
                     'path' => 'encrypted',
@@ -78,8 +84,8 @@ class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // Create test storage directory
-        $testStoragePath = storage_path('testing');
+        $testStoragePath = $this->getTestStoragePath($this->application());
+
         if (! is_dir($testStoragePath)) {
             mkdir($testStoragePath, 0755, true);
         }
@@ -87,28 +93,46 @@ class TestCase extends BaseTestCase
 
     protected function tearDown(): void
     {
-        // Clean up test files
-        $testStoragePath = storage_path('testing');
-        if (is_dir($testStoragePath)) {
-            $this->deleteDirectory($testStoragePath);
-        }
+        $testStoragePath = $this->getTestStoragePath($this->application());
+
+        $this->deleteDirectory($testStoragePath);
 
         parent::tearDown();
     }
 
+    protected function application(): Application
+    {
+        /** @var Application $app */
+        $app = $this->app;
+
+        return $app;
+    }
+
+    protected function getTestStoragePath(Application $app): string
+    {
+        $token = getenv('TEST_TOKEN') ?: '0';
+
+        return $app->basePath(
+            'storage'.DIRECTORY_SEPARATOR.'testing'.DIRECTORY_SEPARATOR.$token
+        );
+    }
+
     protected function deleteDirectory(string $path): void
     {
-        if (is_dir($path)) {
-            $files = array_diff(scandir($path), ['.', '..']);
-            foreach ($files as $file) {
-                $filePath = $path.DIRECTORY_SEPARATOR.$file;
-                if (is_dir($filePath)) {
-                    $this->deleteDirectory($filePath);
-                } else {
-                    unlink($filePath);
-                }
-            }
-            rmdir($path);
+        if (! is_dir($path)) {
+            return;
         }
+
+        foreach (array_diff(scandir($path), ['.', '..']) as $file) {
+            $filePath = $path.DIRECTORY_SEPARATOR.$file;
+
+            if (is_dir($filePath) && ! is_link($filePath)) {
+                $this->deleteDirectory($filePath);
+            } else {
+                unlink($filePath);
+            }
+        }
+
+        rmdir($path);
     }
 }
