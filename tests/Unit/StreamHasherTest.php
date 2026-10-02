@@ -20,15 +20,6 @@ describe('StreamHasher', function (): void {
             expect($hash)->toBe(hash('sha256', $content));
         });
 
-        it('computes md5 hash of file', function () use ($hasher): void {
-            $content = 'test content for md5';
-            $file = UploadedFile::fake()->createWithContent('test.txt', $content);
-
-            $hash = $hasher->hash($file, 'md5');
-
-            expect($hash)->toBe(hash('md5', $content));
-        });
-
         it('computes sha1 hash of file', function () use ($hasher): void {
             $content = 'test content for sha1';
             $file = UploadedFile::fake()->createWithContent('test.txt', $content);

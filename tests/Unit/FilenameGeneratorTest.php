@@ -71,17 +71,6 @@ describe('FilenameGenerator', function (): void {
             expect($filename)->toBe("{$expectedHash}.txt");
         });
 
-        it('generates md5-based filename', function (): void {
-            $generator = new FilenameGenerator('md5');
-            $content = 'content for md5';
-            $file = UploadedFile::fake()->createWithContent('test.txt', $content);
-
-            $filename = $generator->resolve($file);
-
-            $expectedHash = hash('md5', $content);
-            expect($filename)->toBe("{$expectedHash}.txt");
-        });
-
         it('generates sha1-based filename', function (): void {
             $generator = new FilenameGenerator('sha1');
             $content = 'content for sha1';

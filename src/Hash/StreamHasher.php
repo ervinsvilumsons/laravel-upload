@@ -17,7 +17,7 @@ final class StreamHasher implements HashGeneratorContract
      * Compute hash of a file using stream processing.
      *
      * @param  mixed  $file  The file (UploadedFile or path string)
-     * @param  string  $algorithm  The hashing algorithm (md5, sha1, sha256, etc.)
+     * @param  string  $algorithm  The hashing algorithm (sha256, etc.)
      * @param  int  $chunkSize  The size of chunks to read (default 8KB)
      * @return string The computed hash
      *
