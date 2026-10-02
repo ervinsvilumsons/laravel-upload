@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  *
  * Generates filenames using various strategies:
  * - 'uuid': Random UUID
- * - 'md5', 'sha1', 'sha256': Hash of file content (stream-based, memory-efficient)
+ * - 'sha256': Hash of file content (stream-based, memory-efficient)
  * - 'original': Original uploaded filename
  */
 final class FilenameGenerator implements FilenameGeneratorContract
@@ -28,15 +28,11 @@ final class FilenameGenerator implements FilenameGeneratorContract
 
     const array SUPPORTED_STRATEGIES = [
         'uuid',
-        'md5',
-        'sha1',
         'sha256',
         'original',
     ];
 
     const array HASHING_STRATEGIES = [
-        'md5',
-        'sha1',
         'sha256',
     ];
 
@@ -67,8 +63,6 @@ final class FilenameGenerator implements FilenameGeneratorContract
             case 'uuid':
                 return Str::uuid()->toString().'.'.$extension;
 
-            case 'md5':
-            case 'sha1':
             case 'sha256':
                 $fileHash = $precomputedHash ?? $this->streamHasher->hash($file, $this->filenameStrategy);
 
