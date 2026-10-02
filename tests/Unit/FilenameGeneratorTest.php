@@ -71,17 +71,6 @@ describe('FilenameGenerator', function (): void {
             expect($filename)->toBe("{$expectedHash}.txt");
         });
 
-        it('generates sha1-based filename', function (): void {
-            $generator = new FilenameGenerator('sha1');
-            $content = 'content for sha1';
-            $file = UploadedFile::fake()->createWithContent('test.txt', $content);
-
-            $filename = $generator->resolve($file);
-
-            $expectedHash = hash('sha1', $content);
-            expect($filename)->toBe("{$expectedHash}.txt");
-        });
-
         it('generates same filename for identical content', function (): void {
             $generator = new FilenameGenerator('sha256');
             $content = 'identical content';

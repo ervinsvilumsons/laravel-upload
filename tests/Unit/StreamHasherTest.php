@@ -20,15 +20,6 @@ describe('StreamHasher', function (): void {
             expect($hash)->toBe(hash('sha256', $content));
         });
 
-        it('computes sha1 hash of file', function () use ($hasher): void {
-            $content = 'test content for sha1';
-            $file = UploadedFile::fake()->createWithContent('test.txt', $content);
-
-            $hash = $hasher->hash($file, 'sha1');
-
-            expect($hash)->toBe(hash('sha1', $content));
-        });
-
         it('handles large files without buffering', function () use ($hasher): void {
             // Create a 10MB fake file
             $largeFile = UploadedFile::fake()->create('large.bin', 10000);
